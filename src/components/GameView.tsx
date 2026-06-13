@@ -43,6 +43,17 @@ function addPlayer(game: Game, setGame: (g: Game) => void) {
 
 export function GameView({ game, setGame, back, edit }: GameViewProps) {
   const ranks = useMemo(() => rankings(game), [game]);
+  const playersList = useMemo(
+    () => game.players.filter((p) => p.isActive),
+    [game.players],
+  );
+  const placeByPlayerId = useMemo(() => {
+    const map = new Map<string, string>();
+    ranks.forEach((p, i) => {
+      map.set(p.id, place(i));
+    });
+    return map;
+  }, [ranks]);
   const current = round(game);
   const complete = activePlayers(game).every((p) => scoreFor(current, p.id) !== undefined);
   const leader = ranks[0];
@@ -78,29 +89,27 @@ export function GameView({ game, setGame, back, edit }: GameViewProps) {
       </div>
 
       <div className="grid">
-        {ranks
-          .filter((p) => p.isActive)
-          .map((p, i) => {
-            const t = total(game, p.id);
-            const pct = Math.min(100, Math.max(0, (t / (game.settings.targetScore || 1)) * 100));
-            return (
-              <article
-                className="player"
-                key={p.id}
-                onClick={() => edit({ playerId: p.id, roundNumber: game.currentRoundNumber })}
-              >
-                <b>{place(i)}</b>
-                <span>{p.name}</span>
-                <strong>{t}</strong>
-                <em>{scoreFor(current, p.id) === undefined ? 'Missing' : 'Entered'}</em>
-                {game.settings.targetEnabled && (
-                  <div className="bar">
-                    <i style={{ width: `${pct}%` }} />
-                  </div>
-                )}
-              </article>
-            );
-          })}
+        {playersList.map((p) => {
+          const t = total(game, p.id);
+          const pct = Math.min(100, Math.max(0, (t / (game.settings.targetScore || 1)) * 100));
+          return (
+            <article
+              className="player"
+              key={p.id}
+              onClick={() => edit({ playerId: p.id, roundNumber: game.currentRoundNumber })}
+            >
+              <b>{placeByPlayerId.get(p.id) ?? '—'}</b>
+              <span>{p.name}</span>
+              <strong>{t}</strong>
+              <em>{scoreFor(current, p.id) === undefined ? 'Missing' : 'Entered'}</em>
+              {game.settings.targetEnabled && (
+                <div className="bar">
+                  <i style={{ width: `${pct}%` }} />
+                </div>
+              )}
+            </article>
+          );
+        })}
       </div>
 
       <div className="actions">
