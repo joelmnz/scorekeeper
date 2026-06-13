@@ -1,0 +1,18 @@
+{
+    "root": [
+        "./src/export.ts",
+        "./src/helpers.ts",
+        "./src/import.ts",
+        "./src/main.tsx",
+        "./src/storage.ts",
+        "./src/templates.ts",
+        "./src/types.ts",
+        "./src/vite-env.d.ts",
+        "./src/components/GameView.tsx",
+        "./src/components/Home.tsx",
+        "./src/components/Rounds.tsx",
+        "./src/components/ScoreModal.tsx",
+        "./src/components/Setup.tsx"
+    ],
+    "version": "6.0.3"
+}
