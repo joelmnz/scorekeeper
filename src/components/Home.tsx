@@ -45,10 +45,6 @@ export function Home({ store, persist, open, setup }: HomeProps) {
               {templates[g.templateId].label} · {g.players.length} players · Round{' '}
               {g.currentRoundNumber}
             </p>
-            <p>
-              Leader: {rankings(g)[0]?.name ?? '—'} · Updated{' '}
-              {new Date(g.updatedAt).toLocaleString()}
-            </p>
             <div className="actions">
               <button onClick={() => open(g)}>Resume</button>
             </div>
