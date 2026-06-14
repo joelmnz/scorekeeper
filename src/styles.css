@@ -388,11 +388,57 @@ section > div.actions:first-child {
   margin-bottom: 0;
 }
 
+/* ─── PWA Update Prompt ─────────────────────────────────────── */
+.update-prompt {
+  position: fixed;
+  left: 50%;
+  bottom: max(14px, env(safe-area-inset-bottom, 14px));
+  z-index: 90;
+  width: min(560px, calc(100% - 24px));
+  transform: translateX(-50%);
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  gap: 8px;
+  align-items: center;
+  padding: 10px;
+  background: #111113f5;
+  border: 1px solid #3f3f46;
+  border-radius: 18px;
+  box-shadow: 0 14px 42px #000b;
+}
+
+.update-prompt div {
+  min-width: 0;
+}
+
+.update-prompt strong,
+.update-prompt span {
+  display: block;
+}
+
+.update-prompt span {
+  margin-top: 2px;
+  color: #cbd5e1;
+  font-size: 0.85rem;
+}
+
+.update-prompt button {
+  padding: 10px 12px;
+}
+
 /* ─── Responsive: compact hero on mobile ────────────────────── */
 @media (max-width: 719px) {
   .hero {
     padding: 14px;
     margin: 10px 0;
+  }
+
+  .update-prompt {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .update-prompt div {
+    grid-column: 1 / -1;
   }
 }
 
