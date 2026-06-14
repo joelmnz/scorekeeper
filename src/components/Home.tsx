@@ -29,9 +29,9 @@ export function Home({ store, persist, open, setup }: HomeProps) {
   return (
     <section>
       <div className="actions">
-        <button onClick={setup}>Start New Game</button>
+        <button onClick={setup}>Create Game</button>
         <label className="button ghost">
-          Import Game Setup
+          Import Game
           <input
             type="file"
             accept="application/json"

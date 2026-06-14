@@ -7,6 +7,7 @@ import { Home } from './components/Home';
 import { Setup } from './components/Setup';
 import { GameView } from './components/GameView';
 import { ScoreModal } from './components/ScoreModal';
+import { updateGame } from './helpers';
 
 function App() {
   const [store, setStore] = useState(load);
@@ -26,6 +27,23 @@ function App() {
       games: store.games.map((g) => (g.id === next.id ? next : g)),
       activeGameId: next.id,
     });
+
+  const resetGame = (source: Game) => {
+    setGame(
+      updateGame(source, {
+        players: source.players.map((player) => ({
+          ...player,
+          isActive: true,
+          addedInRound: 1,
+          deactivatedAtRound: undefined,
+        })),
+        rounds: [],
+        currentRoundNumber: 1,
+        status: 'active',
+      }),
+    );
+    setScreen('game');
+  };
 
   return (
     <main>
@@ -61,7 +79,13 @@ function App() {
       )}
 
       {screen === 'game' && game && (
-        <GameView game={game} setGame={setGame} back={() => setScreen('home')} edit={setEditing} />
+        <GameView
+          game={game}
+          setGame={setGame}
+          startNewGame={() => resetGame(game)}
+          back={() => setScreen('home')}
+          edit={setEditing}
+        />
       )}
 
       {editing && game && (

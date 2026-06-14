@@ -68,13 +68,13 @@ export function ScoreModal({ game, target, close, saveGame }: ScoreModalProps) {
           onKeyDown={(e) => e.key === 'Enter' && commit(false)}
         />
         <div className="actions">
-          <button onClick={() => commit(false)}>Save score</button>
           <button className="ghost" onClick={() => commit(true)}>
             Clear
           </button>
           <button className="ghost" onClick={close}>
             Cancel
           </button>
+          <button onClick={() => commit(false)}>Save score</button>
         </div>
       </div>
     </div>

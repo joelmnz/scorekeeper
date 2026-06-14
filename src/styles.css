@@ -315,6 +315,10 @@ section > div.actions:first-child {
   border-top: 1px solid #27272a;
 }
 
+.actions + .card {
+  margin-top: 18px;
+}
+
 /* ─── Compact player rows ───────────────────────────────────── */
 .row input {
   margin: 4px 0 8px;
@@ -372,6 +376,16 @@ section > div.actions:first-child {
   letter-spacing: 0.05em;
   padding: 16px;
   margin: 8px 0 20px;
+}
+
+.confirm-sheet {
+  width: min(480px, 100%);
+}
+
+.sheet-copy {
+  color: #cbd5e1;
+  line-height: 1.5;
+  margin-bottom: 0;
 }
 
 /* ─── Responsive: compact hero on mobile ────────────────────── */

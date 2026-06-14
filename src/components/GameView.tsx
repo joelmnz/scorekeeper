@@ -14,10 +14,12 @@ import {
   newId,
 } from '../helpers';
 import { Rounds } from './Rounds';
+import { ConfirmModal } from './ConfirmModal';
 
 type GameViewProps = {
   game: Game;
   setGame: (g: Game) => void;
+  startNewGame: () => void;
   back: () => void;
   edit: (e: { playerId: string; roundNumber: number }) => void;
 };
@@ -41,8 +43,9 @@ function addPlayer(game: Game, setGame: (g: Game) => void) {
     );
 }
 
-export function GameView({ game, setGame, back, edit }: GameViewProps) {
+export function GameView({ game, setGame, startNewGame, back, edit }: GameViewProps) {
   const [showMore, setShowMore] = useState(false);
+  const [showNewGameConfirm, setShowNewGameConfirm] = useState(false);
   const ranks = useMemo(() => rankings(game), [game]);
   const playersList = useMemo(
     () => game.players.filter((p) => p.isActive),
@@ -118,11 +121,14 @@ export function GameView({ game, setGame, back, edit }: GameViewProps) {
       </div>
 
       <div className="actions">
-        <button disabled={!complete} onClick={finish}>
-          Complete round
+        <button className="ghost" onClick={() => setShowNewGameConfirm(true)}>
+          New Game
         </button>
         <button className="ghost" onClick={() => setShowMore(!showMore)}>
           {showMore ? 'Less' : 'More'}
+        </button>
+        <button disabled={!complete} onClick={finish}>
+          Next Round
         </button>
       </div>
       {showMore && (
@@ -146,6 +152,20 @@ export function GameView({ game, setGame, back, edit }: GameViewProps) {
       )}
 
       <Rounds game={game} edit={edit} setGame={setGame} />
+
+      {showNewGameConfirm && (
+        <ConfirmModal
+          title="Start a fresh game?"
+          message="This will reset the current game, clear all scores and round history, and keep the same players and settings."
+          confirmLabel="Reset game"
+          cancelLabel="Keep current scores"
+          onConfirm={() => {
+            setShowNewGameConfirm(false);
+            startNewGame();
+          }}
+          onCancel={() => setShowNewGameConfirm(false)}
+        />
+      )}
     </section>
   );
 }
