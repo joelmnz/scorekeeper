@@ -7,6 +7,7 @@ import { Home } from './components/Home';
 import { Setup } from './components/Setup';
 import { GameView } from './components/GameView';
 import { ScoreModal } from './components/ScoreModal';
+import { UpdatePrompt } from './components/UpdatePrompt';
 import { resetGame } from './helpers';
 
 function App() {
@@ -80,6 +81,8 @@ function App() {
       {editing && game && (
         <ScoreModal game={game} target={editing} close={() => setEditing(null)} saveGame={setGame} />
       )}
+
+      <UpdatePrompt />
     </main>
   );
 }

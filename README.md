@@ -18,12 +18,15 @@ The current implementation supports:
 - Renaming players and deactivating players mid-game
 - Auto-completing a game when a target score is reached
 - Importing scorekeeper JSON back into the app
+- Installing the app as a PWA from supported browsers
+- Reloading the app shell after the first visit even when offline
 
 ## Tech Stack
 
 - React
 - TypeScript
 - Vite
+- vite-plugin-pwa / Workbox
 - Plain CSS
 - `localStorage` for persistence
 - GitHub Actions + GitHub Pages for deployment
@@ -73,7 +76,16 @@ The repository includes a GitHub Actions workflow that:
 - uploads `dist/`
 - deploys to GitHub Pages
 
-The Vite config uses `base: './'`, which keeps the built app compatible with Pages-style static hosting.
+The Vite config uses `base: '/scorekeeper/'`, matching the GitHub Pages project path. The production build also emits a web app manifest and service worker so the app can be installed and reloaded offline after the first successful visit.
+
+For deployment-sensitive changes, run:
+
+```bash
+npm run build
+npm run preview
+```
+
+Then verify that the manifest, icons, and service worker are served under `/scorekeeper/`.
 
 ## Data Model and Persistence
 
