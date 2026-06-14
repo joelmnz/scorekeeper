@@ -1,84 +1,91 @@
-import React, { useMemo, useState } from 'react';
+import React, { useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import './styles.css';
-
-type ScoringMode = 'highest-wins' | 'lowest-wins';
-type GameTemplateId = 'flip7' | 'scrabble' | 'rummy' | 'dutch-blitz' | 'custom';
-type GameSettings = { scoringMode: ScoringMode; targetEnabled: boolean; targetScore?: number; finishRoundAfterTarget: boolean; allowNegativeScores: boolean };
-type Player = { id: string; name: string; isActive: boolean; createdAt: string; addedInRound?: number; deactivatedAtRound?: number };
-type RoundScore = { playerId: string; score: number };
-type Round = { roundNumber: number; scores: RoundScore[]; completedAt?: string };
-type Game = { id: string; name: string; templateId: GameTemplateId; settings: GameSettings; players: Player[]; rounds: Round[]; currentRoundNumber: number; status: 'active' | 'complete'; createdAt: string; updatedAt: string };
-type AppStorage = { version: 1; games: Game[]; activeGameId?: string };
-type Screen = 'home' | 'setup' | 'game';
-
-const STORAGE_KEY = 'game-scorekeeper:v1';
-const now = () => new Date().toISOString();
-const id = () => crypto.randomUUID?.() ?? `${Date.now()}-${Math.random()}`;
-const templates: Record<GameTemplateId, { label: string; settings: GameSettings }> = {
-  flip7: { label: 'Flip7', settings: { scoringMode: 'highest-wins', targetEnabled: true, targetScore: 200, finishRoundAfterTarget: true, allowNegativeScores: false } },
-  scrabble: { label: 'Scrabble', settings: { scoringMode: 'highest-wins', targetEnabled: false, finishRoundAfterTarget: false, allowNegativeScores: true } },
-  rummy: { label: 'Rummy', settings: { scoringMode: 'lowest-wins', targetEnabled: false, finishRoundAfterTarget: false, allowNegativeScores: false } },
-  'dutch-blitz': { label: 'Dutch Blitz', settings: { scoringMode: 'highest-wins', targetEnabled: false, finishRoundAfterTarget: false, allowNegativeScores: true } },
-  custom: { label: 'Custom', settings: { scoringMode: 'highest-wins', targetEnabled: false, finishRoundAfterTarget: false, allowNegativeScores: false } },
-};
-
-function load(): AppStorage { try { const raw = localStorage.getItem(STORAGE_KEY); if (!raw) return { version: 1, games: [] }; const data = JSON.parse(raw); return data?.version === 1 && Array.isArray(data.games) ? data : { version: 1, games: [] }; } catch { return { version: 1, games: [] }; } }
-function save(data: AppStorage) { localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); }
-function activePlayers(game: Game) { return game.players.filter((p) => p.isActive); }
-function playersForRound(game: Game, roundNumber: number) { return game.players.filter((p) => (p.addedInRound ?? 1) <= roundNumber && (p.deactivatedAtRound === undefined || p.deactivatedAtRound > roundNumber)); }
-function round(game: Game, n = game.currentRoundNumber) { return game.rounds.find((r) => r.roundNumber === n) ?? { roundNumber: n, scores: [] }; }
-function total(game: Game, playerId: string) { return game.rounds.flatMap((r) => r.scores).filter((s) => s.playerId === playerId).reduce((sum, s) => sum + s.score, 0); }
-function rankings(game: Game) { const dir = game.settings.scoringMode === 'highest-wins' ? -1 : 1; return [...game.players].sort((a, b) => (total(game, a.id) - total(game, b.id)) * dir); }
-function winner(game: Game) { return rankings(game)[0]; }
-function hasReachedTarget(game: Game) { if (!game.settings.targetEnabled || !game.settings.targetScore) return false; return activePlayers(game).some((p) => total(game, p.id) >= game.settings.targetScore!); }
-function place(i: number) { const n = i + 1; return `${n}${n % 10 === 1 && n !== 11 ? 'st' : n % 10 === 2 && n !== 12 ? 'nd' : n % 10 === 3 && n !== 13 ? 'rd' : 'th'}`; }
-function scoreFor(r: Round, playerId: string) { return r.scores.find((s) => s.playerId === playerId)?.score; }
-function updateGame(game: Game, patch: Partial<Game>): Game { return { ...game, ...patch, updatedAt: now() }; }
-function validateImport(value: unknown): Game[] | null {
-  const validTemplates = Object.keys(templates);
-  const normalize = (input: Partial<Game>): Game | null => {
-    if (!input.name || !input.settings || !Array.isArray(input.players)) return null;
-    if (!validTemplates.includes(input.templateId ?? 'custom')) return null;
-    const settings = input.settings as GameSettings;
-    if (!['highest-wins', 'lowest-wins'].includes(settings.scoringMode)) return null;
-    const players = input.players.map((p) => ({ id: p.id || id(), name: String(p.name || '').trim(), isActive: p.isActive ?? true, createdAt: p.createdAt || now(), addedInRound: p.addedInRound ?? 1, deactivatedAtRound: p.deactivatedAtRound })).filter((p) => p.name);
-    if (players.length < 2) return null;
-    const rounds = Array.isArray(input.rounds) ? input.rounds.map((r) => ({ roundNumber: Number(r.roundNumber), completedAt: r.completedAt, scores: Array.isArray(r.scores) ? r.scores.filter((sc) => players.some((p) => p.id === sc.playerId) && Number.isFinite(sc.score)).map((sc) => ({ playerId: sc.playerId, score: Number(sc.score) })) : [] })).filter((r) => Number.isFinite(r.roundNumber)) : [];
-    return { id: input.id || id(), name: String(input.name), templateId: input.templateId ?? 'custom', settings, players, rounds, currentRoundNumber: input.currentRoundNumber || Math.max(1, rounds.length + 1), status: input.status === 'complete' ? 'complete' : 'active', createdAt: input.createdAt || now(), updatedAt: now() };
-  };
-  const rawGames: Partial<Game>[] = Array.isArray((value as Partial<AppStorage>).games) ? (value as Partial<AppStorage>).games as Partial<Game>[] : [value as Partial<Game>];
-  const games = rawGames.map(normalize);
-  return games.every(Boolean) ? games as Game[] : null;
-}
-
+import type { Game, AppStorage, Screen } from './types';
+import { load, save } from './storage';
+import { Home } from './components/Home';
+import { Setup } from './components/Setup';
+import { GameView } from './components/GameView';
+import { ScoreModal } from './components/ScoreModal';
+import { resetGame } from './helpers';
 
 function App() {
-  const [store, setStore] = useState(load); const [screen, setScreen] = useState<Screen>('home'); const [editing, setEditing] = useState<{ playerId: string; roundNumber: number } | null>(null);
+  const [store, setStore] = useState(load);
+  const [screen, setScreen] = useState<Screen>('home');
+  const [editing, setEditing] = useState<{ playerId: string; roundNumber: number } | null>(null);
+
   const game = store.games.find((g) => g.id === store.activeGameId);
-  const persist = (next: AppStorage) => { setStore(next); save(next); };
-  const setGame = (next: Game) => persist({ ...store, games: store.games.map((g) => g.id === next.id ? next : g), activeGameId: next.id });
-  return <main><header className="app-header">{screen !== 'home' && <button className="ghost" onClick={() => setScreen('home')}>← Home</button>}<h1>Scorekeeper</h1></header>{screen === 'home' && <Home store={store} persist={persist} open={(g, nextStore) => { persist({ ...(nextStore ?? store), activeGameId: g.id }); setScreen('game'); }} setup={() => setScreen('setup')} />}{screen === 'setup' && <Setup back={() => setScreen('home')} create={(g) => { persist({ ...store, games: [g, ...store.games], activeGameId: g.id }); setScreen('game'); }} />}{screen === 'game' && game && <GameView game={game} setGame={setGame} back={() => setScreen('home')} edit={setEditing} />}{editing && game && <ScoreModal game={game} target={editing} close={() => setEditing(null)} saveGame={setGame} />}</main>;
+
+  const persist = (next: AppStorage) => {
+    setStore(next);
+    save(next);
+  };
+
+  const setGame = (next: Game) =>
+    persist({
+      ...store,
+      games: store.games.map((g) => (g.id === next.id ? next : g)),
+      activeGameId: next.id,
+    });
+
+  const resetAndOpenGame = (source: Game) => {
+    setGame(resetGame(source));
+    setScreen('game');
+  };
+
+  return (
+    <main>
+      <header className="app-header">
+        {screen !== 'home' && (
+          <button className="ghost" onClick={() => setScreen('home')}>
+            ← Home
+          </button>
+        )}
+        <h1>Scorekeeper</h1>
+      </header>
+
+      {screen === 'home' && (
+        <Home
+          store={store}
+          persist={persist}
+          open={(g, nextStore) => {
+            persist({ ...(nextStore ?? store), activeGameId: g.id });
+            setScreen('game');
+          }}
+          startFresh={resetAndOpenGame}
+          setup={() => setScreen('setup')}
+        />
+      )}
+
+      {screen === 'setup' && (
+        <Setup
+          back={() => setScreen('home')}
+          create={(g) => {
+            persist({ ...store, games: [g, ...store.games], activeGameId: g.id });
+            setScreen('game');
+          }}
+        />
+      )}
+
+      {screen === 'game' && game && (
+        <GameView
+          game={game}
+          setGame={setGame}
+          startNewGame={() => resetAndOpenGame(game)}
+          back={() => setScreen('home')}
+          edit={setEditing}
+        />
+      )}
+
+      {editing && game && (
+        <ScoreModal game={game} target={editing} close={() => setEditing(null)} saveGame={setGame} />
+      )}
+    </main>
+  );
 }
 
-function Home({ store, persist, open, setup }: { store: AppStorage; persist: (s: AppStorage) => void; open: (g: Game, nextStore?: AppStorage) => void; setup: () => void }) {
-  const importFile = async (file?: File) => { if (!file) return; try { const imported = validateImport(JSON.parse(await file.text())); if (!imported) return alert('Invalid scorekeeper JSON'); persist({ ...store, games: [...imported, ...store.games] }); } catch { alert('Invalid scorekeeper JSON'); } };
-  return <section><div className="actions"><button onClick={setup}>Start New Game</button><label className="button ghost">Import Game Setup<input type="file" accept="application/json" hidden onChange={(e) => importFile(e.target.files?.[0])} /></label></div><div className="grid">{store.games.map((g) => <article className="card" key={g.id}><h2>{g.name}</h2><p>{templates[g.templateId].label} · {g.players.length} players · Round {g.currentRoundNumber}</p><p>Leader: {rankings(g)[0]?.name ?? '—'} · Updated {new Date(g.updatedAt).toLocaleString()}</p><div className="actions"><button onClick={() => open(g)}>Resume</button><button className="ghost" onClick={() => { const copy = cloneSetup(g); open(copy, { ...store, games: [copy, ...store.games], activeGameId: copy.id }); }}>New game from setup</button></div><div className="actions"><button className="ghost" onClick={() => exportGame(g, false)}>Export setup</button><button className="ghost" onClick={() => exportGame(g, true)}>Export full</button><button className="danger" onClick={() => persist({ ...store, games: store.games.filter((x) => x.id !== g.id) })}>Delete</button></div></article>)}</div></section>;
-}
-function Setup({ back, create }: { back: () => void; create: (g: Game) => void }) {
-  const [templateId, setTemplate] = useState<GameTemplateId>('flip7'); const [name, setName] = useState('Flip7 Night'); const [players, setPlayers] = useState(['Player 1', 'Player 2']); const [settings, setSettings] = useState<GameSettings>(templates.flip7.settings);
-  const choose = (t: GameTemplateId) => { setTemplate(t); setSettings(templates[t].settings); setName(t === 'custom' ? 'Custom Game' : `${templates[t].label} Night`); };
-  return <section className="card"><h2>New game setup</h2><label>Template<select value={templateId} onChange={(e) => choose(e.target.value as GameTemplateId)}>{Object.entries(templates).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}</select></label><label>Game name<input value={name} onChange={(e) => setName(e.target.value)} /></label><div className="toggles"><label><input type="checkbox" checked={settings.scoringMode === 'highest-wins'} onChange={(e) => setSettings({ ...settings, scoringMode: e.target.checked ? 'highest-wins' : 'lowest-wins' })} /> Highest score wins</label><label><input type="checkbox" checked={settings.targetEnabled} onChange={(e) => setSettings({ ...settings, targetEnabled: e.target.checked })} /> Target score</label><label><input type="checkbox" checked={settings.finishRoundAfterTarget} onChange={(e) => setSettings({ ...settings, finishRoundAfterTarget: e.target.checked })} /> Finish round after target</label><label><input type="checkbox" checked={settings.allowNegativeScores} onChange={(e) => setSettings({ ...settings, allowNegativeScores: e.target.checked })} /> Allow negative scores</label></div>{settings.targetEnabled && <label>Target<input type="number" value={settings.targetScore ?? 100} onChange={(e) => setSettings({ ...settings, targetScore: Number(e.target.value) })} /></label>}<h3>Players</h3>{players.map((p, i) => <div className="row" key={i}><input value={p} onChange={(e) => setPlayers(players.map((x, n) => n === i ? e.target.value : x))} /><button className="danger" disabled={players.length < 3} onClick={() => setPlayers(players.filter((_, n) => n !== i))}>Remove</button></div>)}<div className="actions"><button className="ghost" onClick={() => setPlayers([...players, `Player ${players.length + 1}`])}>Add player</button><button onClick={() => { const cleanPlayers = players.map((p) => p.trim()).filter(Boolean); if (cleanPlayers.length < 2) return alert('Add at least two named players.'); create({ id: id(), name: name.trim() || templates[templateId].label, templateId, settings, players: cleanPlayers.map((p) => ({ id: id(), name: p, isActive: true, createdAt: now(), addedInRound: 1 })), rounds: [], currentRoundNumber: 1, status: 'active', createdAt: now(), updatedAt: now() }); }}>Create game</button><button className="ghost" onClick={back}>Cancel</button></div></section>;
-}
-function GameView({ game, setGame, back, edit }: { game: Game; setGame: (g: Game) => void; back: () => void; edit: (e: { playerId: string; roundNumber: number }) => void }) {
-  const ranks = useMemo(() => rankings(game), [game]); const current = round(game); const complete = activePlayers(game).every((p) => scoreFor(current, p.id) !== undefined); const leader = ranks[0];
-  const finish = () => { const rounds = game.rounds.some((r) => r.roundNumber === current.roundNumber) ? game.rounds.map((r) => r.roundNumber === current.roundNumber ? { ...current, completedAt: now() } : r) : [...game.rounds, { ...current, completedAt: now() }]; const g = updateGame(game, { rounds }); const hit = hasReachedTarget(g); setGame(updateGame(g, hit ? { status: 'complete' } : { currentRoundNumber: g.currentRoundNumber + 1 })); };
-  return <section><div className="hero"><h2>{game.name}</h2><p>Round {game.currentRoundNumber} · {game.settings.scoringMode === 'highest-wins' ? 'Highest wins' : 'Lowest wins'} {game.settings.targetEnabled && `· Target ${game.settings.targetScore}`}</p><strong>{game.status === 'complete' ? `Winner: ${winner(game)?.name ?? '—'}` : `Leader: ${leader?.name ?? '—'}`}</strong></div><div className="grid">{ranks.filter((p) => p.isActive).map((p, i) => { const t = total(game, p.id); const pct = Math.min(100, Math.max(0, (t / (game.settings.targetScore || 1)) * 100)); return <article className="player" key={p.id} onClick={() => edit({ playerId: p.id, roundNumber: game.currentRoundNumber })}><b>{place(i)}</b><span>{p.name}</span><strong>{t}</strong><em>{scoreFor(current, p.id) === undefined ? 'Missing' : 'Entered'}</em>{game.settings.targetEnabled && <div className="bar"><i style={{ width: `${pct}%` }} /></div>}</article>; })}</div><div className="actions"><button disabled={!complete} onClick={finish}>Complete round</button><button className="ghost" disabled={game.currentRoundNumber < 2} onClick={() => setGame(updateGame(game, { currentRoundNumber: game.currentRoundNumber - 1 }))}>Go to previous round</button><button className="ghost" onClick={() => setGame(updateGame(game, { status: 'complete' }))}>End game</button><button className="ghost" onClick={() => addPlayer(game, setGame)}>Add player</button></div><Rounds game={game} edit={edit} setGame={setGame} /></section>;
-}
-function Rounds({ game, edit, setGame }: { game: Game; edit: (e: { playerId: string; roundNumber: number }) => void; setGame: (g: Game) => void }) { return <section className="card"><h2>Players</h2>{game.players.map((p) => <div className="row" key={p.id}><input value={p.name} onChange={(e) => setGame(updateGame(game, { players: game.players.map((x) => x.id === p.id ? { ...x, name: e.target.value } : x) }))} /><button className="danger" disabled={!p.isActive} onClick={() => setGame(updateGame(game, { players: game.players.map((x) => x.id === p.id ? { ...x, isActive: false, deactivatedAtRound: game.currentRoundNumber } : x) }))}>Deactivate</button></div>)}<h2>Rounds</h2>{game.rounds.map((r) => <article className="round" key={r.roundNumber}><b>Round {r.roundNumber}</b><p>Total: {r.scores.reduce((sum, s) => sum + s.score, 0)} · {playersForRound(game, r.roundNumber).every((p) => scoreFor(r, p.id) !== undefined) ? 'Complete' : 'Missing scores'}</p>{game.players.map((p) => <button className="chip" key={p.id} onClick={() => edit({ playerId: p.id, roundNumber: r.roundNumber })}>{p.name}: {scoreFor(r, p.id) ?? '—'}</button>)}</article>)}</section>; }
-function ScoreModal({ game, target, close, saveGame }: { game: Game; target: { playerId: string; roundNumber: number }; close: () => void; saveGame: (g: Game) => void }) { const r = round(game, target.roundNumber); const existing = scoreFor(r, target.playerId); const [value, setValue] = useState<string>(existing !== undefined ? String(existing) : ''); const player = game.players.find((p) => p.id === target.playerId); const commit = (clear = false) => { if (clear) { const nextRound = { ...r, scores: r.scores.filter((s) => s.playerId !== target.playerId) }; saveGame(updateGame(game, { rounds: game.rounds.some((x) => x.roundNumber === r.roundNumber) ? game.rounds.map((x) => x.roundNumber === r.roundNumber ? nextRound : x) : [...game.rounds, nextRound] })); close(); return; } const num = value === '' ? 0 : Number(value); if (!Number.isFinite(num)) return alert('Enter a valid number.'); if (!game.settings.allowNegativeScores && num < 0) return alert('Negative scores are disabled for this game.'); const nextRound = { ...r, scores: [...r.scores.filter((s) => s.playerId !== target.playerId), { playerId: target.playerId, score: num }] }; saveGame(updateGame(game, { rounds: game.rounds.some((x) => x.roundNumber === r.roundNumber) ? game.rounds.map((x) => x.roundNumber === r.roundNumber ? nextRound : x) : [...game.rounds, nextRound] })); close(); }; return <div className="modal" onClick={(e) => e.target === e.currentTarget && close()}><div className="sheet"><h2>{player?.name} · Round {target.roundNumber}</h2><input autoFocus type="text" inputMode={game.settings.allowNegativeScores ? 'decimal' : 'numeric'} placeholder="0" value={value} onChange={(e) => setValue(e.target.value)} onFocus={(e) => e.target.select()} onKeyDown={(e) => e.key === 'Enter' && commit(false)} /><div className="actions"><button onClick={() => commit(false)}>Save score</button><button className="ghost" onClick={() => commit(true)}>Clear</button><button className="ghost" onClick={close}>Cancel</button></div></div></div>; }
-function addPlayer(game: Game, setGame: (g: Game) => void) { const name = prompt('Player name?'); if (name) setGame(updateGame(game, { players: [...game.players, { id: id(), name, isActive: true, createdAt: now(), addedInRound: game.currentRoundNumber }] })); }
-function cloneSetup(game: Game): Game { return { id: id(), name: `${game.name} Copy`, templateId: game.templateId, settings: { ...game.settings }, players: game.players.filter((p) => p.isActive).map((p) => ({ id: id(), name: p.name, isActive: true, createdAt: now(), addedInRound: 1 })), rounds: [], currentRoundNumber: 1, status: 'active', createdAt: now(), updatedAt: now() }; }
-function exportGame(game: Game, full: boolean) { const data = full ? game : { name: game.name, templateId: game.templateId, settings: game.settings, players: game.players.map((p) => ({ ...p, id: id(), isActive: true })) }; const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }); const a = Object.assign(document.createElement('a'), { href: URL.createObjectURL(blob), download: `${game.name.replace(/\W+/g, '-')}-${full ? 'full' : 'setup'}.json` }); a.click(); URL.revokeObjectURL(a.href); }
-
-createRoot(document.getElementById('root')!).render(<React.StrictMode><App /></React.StrictMode>);
+createRoot(document.getElementById('root')!).render(
+  <React.StrictMode>
+    <App />
+  </React.StrictMode>,
+);
