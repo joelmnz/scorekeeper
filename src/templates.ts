@@ -29,6 +29,26 @@ export const templates: Record<GameTemplateId, { label: string; settings: GameSe
       allowNegativeScores: false,
     },
   },
+  rummikub: {
+    label: 'Rummikub',
+    settings: {
+      scoringMode: 'highest-wins',
+      targetEnabled: true,
+      targetScore: 500,
+      finishRoundAfterTarget: true,
+      allowNegativeScores: false,
+    },
+  },
+  uno: {
+    label: 'Uno',
+    settings: {
+      scoringMode: 'highest-wins',
+      targetEnabled: true,
+      targetScore: 500,
+      finishRoundAfterTarget: true,
+      allowNegativeScores: false,
+    },
+  },
   'dutch-blitz': {
     label: 'Dutch Blitz',
     settings: {

@@ -1,6 +1,13 @@
 export type ScoringMode = 'highest-wins' | 'lowest-wins';
 
-export type GameTemplateId = 'flip7' | 'scrabble' | 'rummy' | 'dutch-blitz' | 'custom';
+export type GameTemplateId =
+  | 'flip7'
+  | 'scrabble'
+  | 'rummy'
+  | 'rummikub'
+  | 'uno'
+  | 'dutch-blitz'
+  | 'custom';
 
 export type GameSettings = {
   scoringMode: ScoringMode;

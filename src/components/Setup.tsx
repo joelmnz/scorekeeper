@@ -10,14 +10,14 @@ type SetupProps = {
 
 export function Setup({ back, create }: SetupProps) {
   const [templateId, setTemplate] = useState<GameTemplateId>('flip7');
-  const [name, setName] = useState('Flip7 Night');
+  const [name, setName] = useState('Flip7');
   const [players, setPlayers] = useState(['Player 1', 'Player 2']);
   const [settings, setSettings] = useState<GameSettings>(templates.flip7.settings);
 
   const choose = (t: GameTemplateId) => {
     setTemplate(t);
     setSettings(templates[t].settings);
-    setName(t === 'custom' ? 'Custom Game' : `${templates[t].label} Night`);
+    setName(t === 'custom' ? 'Custom Game' : `${templates[t].label}`);
   };
 
   return (
