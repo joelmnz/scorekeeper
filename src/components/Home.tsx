@@ -4,16 +4,20 @@ import { templates } from '../templates';
 import { rankings } from '../helpers';
 import { validateImport } from '../import';
 import { exportGame } from '../export';
+import { ConfirmModal } from './ConfirmModal';
 
 type HomeProps = {
   store: AppStorage;
   persist: (s: AppStorage) => void;
   open: (g: Game, nextStore?: AppStorage) => void;
+  startFresh: (g: Game) => void;
   setup: () => void;
 };
 
-export function Home({ store, persist, open, setup }: HomeProps) {
+export function Home({ store, persist, open, startFresh, setup }: HomeProps) {
   const [moreId, setMoreId] = useState<string | null>(null);
+  const [confirmResetId, setConfirmResetId] = useState<string | null>(null);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
   const importFile = async (file?: File) => {
     if (!file) return;
@@ -49,6 +53,9 @@ export function Home({ store, persist, open, setup }: HomeProps) {
               {g.currentRoundNumber}
             </p>
             <div className="actions">
+              <button className="ghost" onClick={() => setConfirmResetId(g.id)}>
+                New
+              </button>
               <button onClick={() => open(g)}>Resume</button>
               <button className="ghost" onClick={() => setMoreId(moreId === g.id ? null : g.id)}>
                 {moreId === g.id ? 'Less' : 'More'}
@@ -64,9 +71,7 @@ export function Home({ store, persist, open, setup }: HomeProps) {
                 </button>
                 <button
                   className="danger"
-                  onClick={() =>
-                    persist({ ...store, games: store.games.filter((x) => x.id !== g.id) })
-                  }
+                  onClick={() => setConfirmDeleteId(g.id)}
                 >
                   Delete
                 </button>
@@ -75,6 +80,37 @@ export function Home({ store, persist, open, setup }: HomeProps) {
           </article>
         ))}
       </div>
+      {confirmResetId && (
+        <ConfirmModal
+          title="Start a fresh game?"
+          message="This will reset the current game, clear all scores and round history, and keep the same players and settings."
+          confirmLabel="Reset game"
+          cancelLabel="Keep current scores"
+          onConfirm={() => {
+            const game = store.games.find((g) => g.id === confirmResetId);
+            setConfirmResetId(null);
+            if (game) startFresh(game);
+          }}
+          onCancel={() => setConfirmResetId(null)}
+        />
+      )}
+      {confirmDeleteId && (
+        <ConfirmModal
+          title="Delete this game?"
+          message="This will permanently remove this saved game and its score history from this device."
+          confirmLabel="Delete game"
+          cancelLabel="Keep game"
+          onConfirm={() => {
+            persist({
+              ...store,
+              games: store.games.filter((g) => g.id !== confirmDeleteId),
+            });
+            setConfirmDeleteId(null);
+            if (moreId === confirmDeleteId) setMoreId(null);
+          }}
+          onCancel={() => setConfirmDeleteId(null)}
+        />
+      )}
     </section>
   );
 }

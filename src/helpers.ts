@@ -53,3 +53,17 @@ export function scoreFor(r: Round, playerId: string): number | undefined {
 export function updateGame(game: Game, patch: Partial<Game>): Game {
   return { ...game, ...patch, updatedAt: now() };
 }
+
+export function resetGame(game: Game): Game {
+  return updateGame(game, {
+    players: game.players.map((player) => ({
+      ...player,
+      isActive: true,
+      addedInRound: 1,
+      deactivatedAtRound: undefined,
+    })),
+    rounds: [],
+    currentRoundNumber: 1,
+    status: 'active',
+  });
+}

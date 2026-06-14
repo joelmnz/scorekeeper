@@ -7,7 +7,7 @@ import { Home } from './components/Home';
 import { Setup } from './components/Setup';
 import { GameView } from './components/GameView';
 import { ScoreModal } from './components/ScoreModal';
-import { updateGame } from './helpers';
+import { resetGame } from './helpers';
 
 function App() {
   const [store, setStore] = useState(load);
@@ -28,20 +28,8 @@ function App() {
       activeGameId: next.id,
     });
 
-  const resetGame = (source: Game) => {
-    setGame(
-      updateGame(source, {
-        players: source.players.map((player) => ({
-          ...player,
-          isActive: true,
-          addedInRound: 1,
-          deactivatedAtRound: undefined,
-        })),
-        rounds: [],
-        currentRoundNumber: 1,
-        status: 'active',
-      }),
-    );
+  const resetAndOpenGame = (source: Game) => {
+    setGame(resetGame(source));
     setScreen('game');
   };
 
@@ -64,6 +52,7 @@ function App() {
             persist({ ...(nextStore ?? store), activeGameId: g.id });
             setScreen('game');
           }}
+          startFresh={resetAndOpenGame}
           setup={() => setScreen('setup')}
         />
       )}
@@ -82,7 +71,7 @@ function App() {
         <GameView
           game={game}
           setGame={setGame}
-          startNewGame={() => resetGame(game)}
+          startNewGame={() => resetAndOpenGame(game)}
           back={() => setScreen('home')}
           edit={setEditing}
         />
