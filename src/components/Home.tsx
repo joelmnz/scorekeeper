@@ -3,7 +3,7 @@ import type { Game, AppStorage } from '../types';
 import { templates } from '../templates';
 import { rankings } from '../helpers';
 import { validateImport } from '../import';
-import { exportGame } from '../export';
+import { exportGame, exportStore } from '../export';
 import { ConfirmModal } from './ConfirmModal';
 
 type HomeProps = {
@@ -33,9 +33,18 @@ export function Home({ store, persist, open, startFresh, setup }: HomeProps) {
   return (
     <section>
       <div className="actions">
-        <button onClick={setup}>Create Game</button>
-        <label className="button ghost">
-          Import Game
+        <button title="Create a brand new scorekeeping game" onClick={setup}>
+          Create Game
+        </button>
+        <button
+          className="ghost"
+          title="Export all saved games and score history as one file"
+          onClick={() => exportStore(store)}
+        >
+          Export
+        </button>
+        <label className="button ghost" title="Import a saved game or full scorekeeper export">
+          Import
           <input
             type="file"
             accept="application/json"
@@ -63,14 +72,16 @@ export function Home({ store, persist, open, startFresh, setup }: HomeProps) {
             </div>
             {moreId === g.id && (
               <div className="actions">
-                <button className="ghost" onClick={() => exportGame(g, false)}>
-                  Export setup
-                </button>
-                <button className="ghost" onClick={() => exportGame(g, true)}>
-                  Export full
+                <button
+                  className="ghost"
+                  title="Export this game's setup without score history"
+                  onClick={() => exportGame(g, false)}
+                >
+                  Export Game
                 </button>
                 <button
                   className="danger"
+                  title="Delete this saved game from this device"
                   onClick={() => setConfirmDeleteId(g.id)}
                 >
                   Delete
