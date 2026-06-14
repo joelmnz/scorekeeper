@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import type { Game, AppStorage } from '../types';
 import { templates } from '../templates';
 import { rankings } from '../helpers';
@@ -12,6 +13,8 @@ type HomeProps = {
 };
 
 export function Home({ store, persist, open, setup }: HomeProps) {
+  const [moreId, setMoreId] = useState<string | null>(null);
+
   const importFile = async (file?: File) => {
     if (!file) return;
     try {
@@ -47,23 +50,28 @@ export function Home({ store, persist, open, setup }: HomeProps) {
             </p>
             <div className="actions">
               <button onClick={() => open(g)}>Resume</button>
-            </div>
-            <div className="actions">
-              <button className="ghost" onClick={() => exportGame(g, false)}>
-                Export setup
-              </button>
-              <button className="ghost" onClick={() => exportGame(g, true)}>
-                Export full
-              </button>
-              <button
-                className="danger"
-                onClick={() =>
-                  persist({ ...store, games: store.games.filter((x) => x.id !== g.id) })
-                }
-              >
-                Delete
+              <button className="ghost" onClick={() => setMoreId(moreId === g.id ? null : g.id)}>
+                {moreId === g.id ? 'Less' : 'More'}
               </button>
             </div>
+            {moreId === g.id && (
+              <div className="actions">
+                <button className="ghost" onClick={() => exportGame(g, false)}>
+                  Export setup
+                </button>
+                <button className="ghost" onClick={() => exportGame(g, true)}>
+                  Export full
+                </button>
+                <button
+                  className="danger"
+                  onClick={() =>
+                    persist({ ...store, games: store.games.filter((x) => x.id !== g.id) })
+                  }
+                >
+                  Delete
+                </button>
+              </div>
+            )}
           </article>
         ))}
       </div>

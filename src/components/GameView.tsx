@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import type { Game } from '../types';
 import {
   rankings,
@@ -42,6 +42,7 @@ function addPlayer(game: Game, setGame: (g: Game) => void) {
 }
 
 export function GameView({ game, setGame, back, edit }: GameViewProps) {
+  const [showMore, setShowMore] = useState(false);
   const ranks = useMemo(() => rankings(game), [game]);
   const playersList = useMemo(
     () => game.players.filter((p) => p.isActive),
@@ -75,17 +76,19 @@ export function GameView({ game, setGame, back, edit }: GameViewProps) {
   return (
     <section>
       <div className="hero">
-        <h2>{game.name}</h2>
-        <p>
-          Round {game.currentRoundNumber} ·{' '}
-          {game.settings.scoringMode === 'highest-wins' ? 'Highest wins' : 'Lowest wins'}{' '}
-          {game.settings.targetEnabled && `· Target ${game.settings.targetScore}`}
-        </p>
-        <strong>
+        <h2 className="hero-name">{game.name}</h2>
+        <span className="hero-status">
           {game.status === 'complete'
             ? `Winner: ${winner(game)?.name ?? '—'}`
             : `Leader: ${leader?.name ?? '—'}`}
-        </strong>
+        </span>
+        <div className="hero-meta">
+          <span className="round-pill">R{game.currentRoundNumber}</span>
+          <span>
+            {game.settings.scoringMode === 'highest-wins' ? 'Hi wins' : 'Lo wins'}
+            {game.settings.targetEnabled && ` · Target ${game.settings.targetScore}`}
+          </span>
+        </div>
       </div>
 
       <div className="grid">
@@ -100,8 +103,10 @@ export function GameView({ game, setGame, back, edit }: GameViewProps) {
             >
               <b>{placeByPlayerId.get(p.id) ?? '—'}</b>
               <span>{p.name}</span>
+              <em className={`entry-pill ${scoreFor(current, p.id) === undefined ? 'missing' : 'entered'}`}>
+                {scoreFor(current, p.id) === undefined ? '—' : '✓'}
+              </em>
               <strong>{t}</strong>
-              <em>{scoreFor(current, p.id) === undefined ? 'Missing' : 'Entered'}</em>
               {game.settings.targetEnabled && (
                 <div className="bar">
                   <i style={{ width: `${pct}%` }} />
@@ -116,22 +121,29 @@ export function GameView({ game, setGame, back, edit }: GameViewProps) {
         <button disabled={!complete} onClick={finish}>
           Complete round
         </button>
-        <button
-          className="ghost"
-          disabled={game.currentRoundNumber < 2}
-          onClick={() =>
-            setGame(updateGame(game, { currentRoundNumber: game.currentRoundNumber - 1 }))
-          }
-        >
-          Go to previous round
-        </button>
-        <button className="ghost" onClick={() => setGame(updateGame(game, { status: 'complete' }))}>
-          End game
-        </button>
-        <button className="ghost" onClick={() => addPlayer(game, setGame)}>
-          Add player
+        <button className="ghost" onClick={() => setShowMore(!showMore)}>
+          {showMore ? 'Less' : 'More'}
         </button>
       </div>
+      {showMore && (
+        <div className="actions">
+          <button
+            className="ghost"
+            disabled={game.currentRoundNumber < 2}
+            onClick={() =>
+              setGame(updateGame(game, { currentRoundNumber: game.currentRoundNumber - 1 }))
+            }
+          >
+            Go to previous round
+          </button>
+          <button className="ghost" onClick={() => setGame(updateGame(game, { status: 'complete' }))}>
+            End game
+          </button>
+          <button className="ghost" onClick={() => addPlayer(game, setGame)}>
+            Add player
+          </button>
+        </div>
+      )}
 
       <Rounds game={game} edit={edit} setGame={setGame} />
     </section>
