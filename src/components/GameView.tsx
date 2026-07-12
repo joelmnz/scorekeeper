@@ -71,9 +71,12 @@ export function GameView({ game, setGame, startNewGame, back, edit }: GameViewPr
 
     const g = updateGame(game, { rounds });
     const hit = hasReachedTarget(g);
-    setGame(
-      updateGame(g, hit ? { status: 'complete' } : { currentRoundNumber: g.currentRoundNumber + 1 }),
+    const nextGame = updateGame(
+      g,
+      hit ? { status: 'complete' } : { currentRoundNumber: g.currentRoundNumber + 1 },
     );
+
+    setGame(nextGame);
   };
 
   return (
@@ -132,26 +135,28 @@ export function GameView({ game, setGame, startNewGame, back, edit }: GameViewPr
         </button>
       </div>
       {showMore && (
-        <div className="actions">
-          <button
-            className="ghost"
-            disabled={game.currentRoundNumber < 2}
-            onClick={() =>
-              setGame(updateGame(game, { currentRoundNumber: game.currentRoundNumber - 1 }))
-            }
-          >
-            Go to previous round
-          </button>
-          <button className="ghost" onClick={() => setGame(updateGame(game, { status: 'complete' }))}>
-            End game
-          </button>
-          <button className="ghost" onClick={() => addPlayer(game, setGame)}>
-            Add player
-          </button>
-        </div>
-      )}
+        <>
+          <div className="actions">
+            <button
+              className="ghost"
+              disabled={game.currentRoundNumber < 2}
+              onClick={() =>
+                setGame(updateGame(game, { currentRoundNumber: game.currentRoundNumber - 1 }))
+              }
+            >
+              Go to previous round
+            </button>
+            <button className="ghost" onClick={() => setGame(updateGame(game, { status: 'complete' }))}>
+              End game
+            </button>
+            <button className="ghost" onClick={() => addPlayer(game, setGame)}>
+              Add player
+            </button>
+          </div>
 
-      <Rounds game={game} edit={edit} setGame={setGame} />
+          <Rounds game={game} edit={edit} setGame={setGame} />
+        </>
+      )}
 
       {showNewGameConfirm && (
         <ConfirmModal
